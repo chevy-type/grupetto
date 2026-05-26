@@ -36,6 +36,7 @@ import com.spop.poverlay.GrupettoApplication
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.R
 
+import com.spop.poverlay.endurain.WorkoutRecorder
 import com.spop.poverlay.sensor.CadenceWatchdog
 import com.spop.poverlay.sensor.DeadSensorDetector
 import com.spop.poverlay.sensor.interfaces.DummySensorInterface
@@ -187,19 +188,31 @@ class OverlayService : LifecycleEnabledService() {
             EmulatorSensorInterface
         }
 
+        val configRepository = ConfigurationRepository(applicationContext, this)
+
         val timerViewModel = OverlayTimerViewModel(
             application,
-            ConfigurationRepository(applicationContext, this),
+            configRepository,
             sensorInterface.power
         )
+
+        val workoutRecorder = WorkoutRecorder(
+            sensorInterface,
+            configRepository,
+            lifecycleScope
+        ).also { it.startSensorCollection() }
 
         val sensorViewModel = OverlaySensorViewModel(
             application,
             sensorInterface,
             DeadSensorDetector(sensorInterface, this.coroutineContext),
-            timerViewModel
+            timerViewModel,
+            workoutRecorder
         )
         this.sensorViewModel = sensorViewModel
+
+        // Auto-start recording on movement, auto-upload on session reset
+        workoutRecorder.observeSession(sensorViewModel.isMoving, sensorViewModel.sessionReset)
         // Wire up timer to auto-start/pause based on movement
         timerViewModel.observeMovement(sensorViewModel.isMoving, sensorViewModel.sessionReset)
 
