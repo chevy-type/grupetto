@@ -55,6 +55,14 @@ class ConfigurationViewModel(
     val bleFtmsDeviceName
         get() = configurationRepository.bleFtmsDeviceName
 
+    val endurainHost     get() = configurationRepository.endurainHost
+    val endurainUsername get() = configurationRepository.endurainUsername
+    val endurainPassword get() = configurationRepository.endurainPassword
+
+    fun setEndurainHost(v: String)     = configurationRepository.setEndurainHost(v)
+    fun setEndurainUsername(v: String) = configurationRepository.setEndurainUsername(v)
+    fun setEndurainPassword(v: String) = configurationRepository.setEndurainPassword(v)
+
     private val bleServer = (application as GrupettoApplication).bleServer
     private var batteryOptimizationPromptShownThisSession = false
 
