@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
@@ -315,6 +316,68 @@ private fun StartServicePage(
                             overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(uiScale.dp(12f)))
+
+        // ── Endurain upload card ───────────────────────────────────────────
+        Card(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = cardColor,
+                elevation = uiScale.dp(4f)
+        ) {
+            Column(modifier = Modifier.padding(cardPadding)) {
+                Text("Endurain Upload", fontSize = uiScale.sp(18f),
+                    fontWeight = FontWeight.Bold, color = headingColor)
+                Spacer(modifier = Modifier.height(uiScale.dp(8f)))
+
+                var endurainHost     by remember { mutableStateOf(viewModel.endurainHost.value) }
+                var endurainUser     by remember { mutableStateOf(viewModel.endurainUsername.value) }
+                var endurainPassword by remember { mutableStateOf(viewModel.endurainPassword.value) }
+
+                Text("Server URL", color = bodyColor, fontSize = uiScale.sp(14f))
+                TextField(
+                    value = endurainHost,
+                    onValueChange = {
+                        endurainHost = it
+                        viewModel.setEndurainHost(it)
+                    },
+                    placeholder = { Text("https://endurain.example.com") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(uiScale.dp(6f)))
+
+                Text("Username", color = bodyColor, fontSize = uiScale.sp(14f))
+                TextField(
+                    value = endurainUser,
+                    onValueChange = {
+                        endurainUser = it
+                        viewModel.setEndurainUsername(it)
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(uiScale.dp(6f)))
+
+                Text("Password", color = bodyColor, fontSize = uiScale.sp(14f))
+                TextField(
+                    value = endurainPassword,
+                    onValueChange = {
+                        endurainPassword = it
+                        viewModel.setEndurainPassword(it)
+                    },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(uiScale.dp(8f)))
+                Text(
+                    "Workouts are uploaded automatically when a session ends.",
+                    color = bodyColor,
+                    fontSize = uiScale.sp(13f)
+                )
             }
         }
 
