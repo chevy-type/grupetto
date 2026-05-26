@@ -32,6 +32,16 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
 
     val showTimerWhenMinimized = mutableShowTimerWhenMinimized
     val bleTxEnabled = mutableBleTxEnabled
+    val endurainHost: MutableStateFlow<String> by lazy {
+        MutableStateFlow(sharedPreferences.getString(Preferences.EndurainHost.key, "") ?: "")
+    }
+    val endurainUsername: MutableStateFlow<String> by lazy {
+        MutableStateFlow(sharedPreferences.getString(Preferences.EndurainUsername.key, "") ?: "")
+    }
+    val endurainPassword: MutableStateFlow<String> by lazy {
+        MutableStateFlow(sharedPreferences.getString(Preferences.EndurainPassword.key, "") ?: "")
+    }
+
     val bleFtmsDeviceName = mutableBleFtmsDeviceName
     val serialNumber = mutableSerialNumber
 
@@ -71,6 +81,21 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
         sharedPreferences.edit {
             putBoolean(Preferences.BleTxEnabled.key, enabled)
         }
+    }
+
+    fun setEndurainHost(value: String) {
+        sharedPreferences.edit().putString(Preferences.EndurainHost.key, value).apply()
+        endurainHost.value = value
+    }
+
+    fun setEndurainUsername(value: String) {
+        sharedPreferences.edit().putString(Preferences.EndurainUsername.key, value).apply()
+        endurainUsername.value = value
+    }
+
+    fun setEndurainPassword(value: String) {
+        sharedPreferences.edit().putString(Preferences.EndurainPassword.key, value).apply()
+        endurainPassword.value = value
     }
 
     fun setBleFtmsDeviceName(name: String) {
