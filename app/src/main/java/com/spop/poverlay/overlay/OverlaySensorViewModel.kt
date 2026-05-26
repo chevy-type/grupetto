@@ -10,6 +10,8 @@ import androidx.lifecycle.viewModelScope
 import com.spop.poverlay.MainActivity
 import com.spop.poverlay.sensor.DeadSensorDetector
 import com.spop.poverlay.sensor.heartrate.HeartRateManager
+import com.spop.poverlay.endurain.UploadStatus
+import com.spop.poverlay.endurain.WorkoutRecorder
 import com.spop.poverlay.sensor.interfaces.SensorInterface
 import com.spop.poverlay.util.smoothSensorValue
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +56,8 @@ class OverlaySensorViewModel(
     application: Application,
     private val sensorInterface: SensorInterface,
     private val deadSensorDetector: DeadSensorDetector,
-    private val timerViewModel: OverlayTimerViewModel
+    private val timerViewModel: OverlayTimerViewModel,
+    private val workoutRecorder: WorkoutRecorder? = null
 ) : AndroidViewModel(application) {
 
     companion object {
