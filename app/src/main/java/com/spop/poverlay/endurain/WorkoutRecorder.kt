@@ -1,7 +1,6 @@
 package com.spop.poverlay.endurain
 
 import com.spop.poverlay.ConfigurationRepository
-import com.spop.poverlay.sensor.heartrate.HeartRateManager
 import com.spop.poverlay.sensor.interfaces.SensorInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,12 +26,12 @@ class WorkoutRecorder(
 ) {
     private val records = mutableListOf<FitWriter.SensorRecord>()
     private var samplingJob: Job? = null
+    private var inactivityJob: Job? = null
 
-    // Latest sensor values — kept up-to-date by collector coroutines
+    // Latest sensor values – updated by collector coroutines
     @Volatile private var latestPower    = 0f
     @Volatile private var latestCadence = 0f
-    @Volatile private var latestSpeed   = 0f  // mph (raw from Peloton interface)
-    @Volatile private var latestHr      = 0
+    @Volatile private var latestSpeed   = 0f  // mph from Peloton
 
     private val _uploadStatus = MutableStateFlow(UploadStatus.IDLE)
     val uploadStatus: StateFlow<UploadStatus> = _uploadStatus.asStateFlow()
@@ -40,23 +39,44 @@ class WorkoutRecorder(
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
 
-    /** Call once after creation to keep sensor values current */
+    /** Call once after creation – keeps sensor values current without HR dependency */
     fun startSensorCollection() {
         scope.launch(Dispatchers.IO) { sensorInterface.power.collect   { latestPower    = it } }
         scope.launch(Dispatchers.IO) { sensorInterface.cadence.collect { latestCadence = it } }
         scope.launch(Dispatchers.IO) { sensorInterface.speed.collect   { latestSpeed   = it } }
-        scope.launch(Dispatchers.IO) { HeartRateManager.heartRate.collect { latestHr  = it ?: 0 } }
+        Timber.i("WorkoutRecorder: sensor collection started")
     }
 
-    /** Wire movement / session-reset flows from OverlaySensorViewModel */
+    /** Wire isMoving and sessionReset from OverlaySensorViewModel */
     fun observeSession(isMoving: Flow<Boolean>, sessionReset: Flow<Long>) {
         scope.launch {
             isMoving.collect { moving ->
-                if (moving && !_isRecording.value) startRecording()
+                if (moving) {
+                    inactivityJob?.cancel()
+                    if (!_isRecording.value) startRecording()
+                } else {
+                    // Upload after 3 minutes of inactivity as a safety net
+                    if (_isRecording.value) {
+                        inactivityJob?.cancel()
+                        inactivityJob = scope.launch {
+                            Timber.i("WorkoutRecorder: inactivity timer started (3 min)")
+                            delay(3 * 60 * 1000L)
+                            if (_isRecording.value) {
+                                Timber.i("WorkoutRecorder: inactivity timeout → uploading")
+                                stopAndUpload()
+                            }
+                        }
+                    }
+                }
             }
         }
         scope.launch {
-            sessionReset.collect {
+            var firstEmit = true
+            sessionReset.collect { timestamp ->
+                // StateFlow always emits current value first (0L) – ignore that
+                if (firstEmit) { firstEmit = false; return@collect }
+                Timber.i("WorkoutRecorder: sessionReset received ts=$timestamp")
+                inactivityJob?.cancel()
                 if (_isRecording.value) stopAndUpload()
             }
         }
@@ -78,7 +98,7 @@ class WorkoutRecorder(
                         powerWatts       = latestPower.toInt(),
                         cadenceRpm       = latestCadence.toInt(),
                         speedMps         = latestSpeed * 0.44704f,  // mph → m/s
-                        heartRate        = latestHr
+                        heartRate        = 0
                     ))
                 }
             }
@@ -86,10 +106,10 @@ class WorkoutRecorder(
     }
 
     fun stopRecording() {
-        samplingJob?.cancel()
-        samplingJob      = null
+        samplingJob?.cancel(); samplingJob = null
+        inactivityJob?.cancel(); inactivityJob = null
         _isRecording.value = false
-        Timber.i("WorkoutRecorder: stopped – ${records.size} records collected")
+        Timber.i("WorkoutRecorder: stopped – ${records.size} records")
     }
 
     fun stopAndUpload() {
@@ -106,8 +126,8 @@ class WorkoutRecorder(
         }
 
         val snapshot = synchronized(records) { records.toList() }
-        if (snapshot.isEmpty()) {
-            Timber.w("WorkoutRecorder: no records to upload")
+        if (snapshot.size < 5) {
+            Timber.w("WorkoutRecorder: too few records (${snapshot.size}) – skipping upload")
             _uploadStatus.value = UploadStatus.IDLE
             return
         }
@@ -115,15 +135,17 @@ class WorkoutRecorder(
         scope.launch {
             _uploadStatus.value = UploadStatus.UPLOADING
             try {
+                Timber.i("WorkoutRecorder: building FIT (${snapshot.size} records)")
                 val fitBytes  = FitWriter.buildFitFile(snapshot)
+                Timber.i("WorkoutRecorder: FIT built (${fitBytes.size} bytes), logging in to $host")
                 val client    = EndurainClient(host)
                 val token     = client.login(user, pass)
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                 val success   = client.uploadActivity(token, fitBytes, "grupetto_$timestamp.fit")
                 _uploadStatus.value = if (success) UploadStatus.SUCCESS else UploadStatus.ERROR
-                Timber.i("WorkoutRecorder: upload ${if (success) "succeeded" else "failed"}")
+                Timber.i("WorkoutRecorder: upload ${if (success) "succeeded ✓" else "failed ✗"}")
             } catch (e: Exception) {
-                Timber.e(e, "WorkoutRecorder: upload error")
+                Timber.e(e, "WorkoutRecorder: upload exception")
                 _uploadStatus.value = UploadStatus.ERROR
             }
         }
