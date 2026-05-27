@@ -13,8 +13,11 @@ class ConfigurationRepository(context: Context, lifecycleOwner: LifecycleOwner) 
     enum class Preferences(val key: String) {
         ShowTimerWhenMinimized("showTimerWhenMinimized"),
         BleTxEnabled("bleTxEnabled"),
-    BleFtmsDeviceName("bleFtmsDeviceName"),
-    SerialNumber("serialNumber")
+        BleFtmsDeviceName("bleFtmsDeviceName"),
+        SerialNumber("serialNumber"),
+        EndurainHost("endurainHost"),
+        EndurainUsername("endurainUsername"),
+        EndurainPassword("endurainPassword")
     }
 
     companion object {

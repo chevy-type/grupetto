@@ -49,7 +49,7 @@ class WorkoutRecorder(
     }
 
     /** Wire movement / session-reset flows from OverlaySensorViewModel */
-    fun observeSession(isMoving: Flow<Boolean>, sessionReset: Flow<Unit>) {
+    fun observeSession(isMoving: Flow<Boolean>, sessionReset: Flow<Long>) {
         scope.launch {
             isMoving.collect { moving ->
                 if (moving && !_isRecording.value) startRecording()

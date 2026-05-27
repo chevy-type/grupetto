@@ -82,6 +82,12 @@ fun ConfigurationPage(viewModel: ConfigurationViewModel) {
                         viewModel.hrMatchByName.collectAsStateWithLifecycle(initialValue = false)
                 val isOverlayRunning by
                         viewModel.isOverlayRunning.collectAsStateWithLifecycle(initialValue = false)
+                val endurainHost by
+                        viewModel.endurainHost.collectAsStateWithLifecycle(initialValue = "")
+                val endurainUsername by
+                        viewModel.endurainUsername.collectAsStateWithLifecycle(initialValue = "")
+                val endurainPassword by
+                        viewModel.endurainPassword.collectAsStateWithLifecycle(initialValue = "")
                 StartServicePage(
                         timerShownWhenMinimized,
                         viewModel::onShowTimerWhenMinimizedClicked,
@@ -104,7 +110,13 @@ fun ConfigurationPage(viewModel: ConfigurationViewModel) {
                         viewModel::onStartServiceClicked,
                         viewModel::onQuitClicked,
                         viewModel::onClickedRelease,
-                        latestRelease
+                        latestRelease,
+                        endurainHost,
+                        viewModel::setEndurainHost,
+                        endurainUsername,
+                        viewModel::setEndurainUsername,
+                        endurainPassword,
+                        viewModel::setEndurainPassword
                 )
             }
         }
@@ -134,7 +146,13 @@ private fun StartServicePage(
         onClickedStartOverlay: () -> Unit,
         onClickedQuitApp: () -> Unit,
         onClickedRelease: (Release) -> Unit,
-        latestRelease: Release?
+        latestRelease: Release?,
+        endurainHost: String,
+        onEndurainHostChanged: (String) -> Unit,
+        endurainUsername: String,
+        onEndurainUsernameChanged: (String) -> Unit,
+        endurainPassword: String,
+        onEndurainPasswordChanged: (String) -> Unit
 ) {
     var showHeartRateDialog by remember { mutableStateOf(false) }
 
@@ -332,17 +350,10 @@ private fun StartServicePage(
                     fontWeight = FontWeight.Bold, color = headingColor)
                 Spacer(modifier = Modifier.height(uiScale.dp(8f)))
 
-                var endurainHost     by remember { mutableStateOf(viewModel.endurainHost.value) }
-                var endurainUser     by remember { mutableStateOf(viewModel.endurainUsername.value) }
-                var endurainPassword by remember { mutableStateOf(viewModel.endurainPassword.value) }
-
                 Text("Server URL", color = bodyColor, fontSize = uiScale.sp(14f))
                 TextField(
                     value = endurainHost,
-                    onValueChange = {
-                        endurainHost = it
-                        viewModel.setEndurainHost(it)
-                    },
+                    onValueChange = onEndurainHostChanged,
                     placeholder = { Text("https://endurain.example.com") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -351,11 +362,8 @@ private fun StartServicePage(
 
                 Text("Username", color = bodyColor, fontSize = uiScale.sp(14f))
                 TextField(
-                    value = endurainUser,
-                    onValueChange = {
-                        endurainUser = it
-                        viewModel.setEndurainUsername(it)
-                    },
+                    value = endurainUsername,
+                    onValueChange = onEndurainUsernameChanged,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -364,10 +372,7 @@ private fun StartServicePage(
                 Text("Password", color = bodyColor, fontSize = uiScale.sp(14f))
                 TextField(
                     value = endurainPassword,
-                    onValueChange = {
-                        endurainPassword = it
-                        viewModel.setEndurainPassword(it)
-                    },
+                    onValueChange = onEndurainPasswordChanged,
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
